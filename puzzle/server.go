@@ -4,13 +4,14 @@ import (
 	"net"
 	"fmt"
 	"bufio"
-	"strings"
 )
+
+type handler func(string, []string)
 
 type Server struct {
 	conn net.Conn
 	reader *bufio.Reader
-	handlers map[string]func([]string)
+	handlers map[string]handler
 
 	name string
 	addr string
@@ -70,36 +71,20 @@ func (srv *Server) listenLoop() {
 }
 
 func (srv *Server) handleLine(line string) {
-	line = strings.Replace(line, "\r", "", -1)
-	line = strings.Replace(line, "\n", "", -1)
+	command, origin, args := parseLine(line)
 
-	command, args := srv.parseServerLine(line)
-
-	handler := srv.handlers[command]
-	if handler != nil {
-		handler(args)
+	h := srv.handlers[command]
+	if h != nil {
+		h(origin, args)
 	}
 }
 
-func (srv *Server) handlePing(args []string) {
+func (srv *Server) handlePing(origin string, args []string) {
 	// TODO - It is possible a server could send a "PING" with
 	// no server argument.
-	srv.write(fmt.Sprintf("PONG %s\r\n", args[0]))
+	srv.write(fmt.Sprintf("PONG :%s\r\n", args[0]))
 }
 
-func (srv *Server) parseServerLine(line string) (string, []string) {
-	// TODO - Handle colon-seperated multi-space last arguments
-	tokens := strings.Split(line, " ")
-
-	var command string
-	var args []string
-
-	command = strings.ToUpper(tokens[0])
-	if len(tokens) > 1 {
-		args = tokens[1:]
-	}
-	
-	return command, args
 }
 
 func (srv *Server) read() (string, error) {
