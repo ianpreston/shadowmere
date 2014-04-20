@@ -20,12 +20,7 @@ type Server struct {
 	pass string
 }
 
-func NewServer() (*Server, error) {
-	// TODO - Load configuration values from a file
-	name := "noveria.0x-1.com"
-	addr := "localhost:6667"
-	pass := "foo"
-
+func NewServer(name, addr, pass string) (*Server, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
