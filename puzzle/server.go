@@ -13,7 +13,8 @@ type Server struct {
 	reader *bufio.Reader
 
 	handlers map[string]handler
-	services []Service
+	
+	nickserv *NickServ
 
 	// TODO - This really doesn't belong here
 	datastore *Datastore
@@ -48,10 +49,6 @@ func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 		"NICK": server.handleNickChange,
 	}
 
-	server.services = []Service{
-		NewNickserv(server),
-	}
-
 	return server, nil
 }
 
@@ -69,9 +66,9 @@ func (srv *Server) authenticateTS5() {
 }
 
 func (srv *Server) initializeServices() {
-	for _, sv := range srv.services {
-		srv.nick(sv.Nick(), sv.Nick(), srv.name, "services")
-	}
+	ns := NewNickserv(srv)
+	srv.nick(ns.Nick, ns.Nick, srv.name, "Services")
+	srv.nickserv = ns
 }
 
 func (srv *Server) listenLoop() {
@@ -116,11 +113,8 @@ func (srv *Server) handlePrivmsg(origin string, args []string) {
 
 	to := args[0]
 	msg := args[1]
-	
-	for _, sv := range srv.services {
-		if sv.Nick() == to {
-			sv.OnPrivmsg(origin, msg)
-		}
+	if srv.nickserv.Nick == to {
+		srv.nickserv.OnPrivmsg(origin, msg)
 	}
 }
 
@@ -130,9 +124,7 @@ func (srv *Server) handleQuit(origin string, args []string) {
 		msg = args[0]
 	}
 
-	for _, sv := range srv.services {
-		sv.OnQuit(origin, msg)
-	}
+	srv.nickserv.OnQuit(origin, msg)
 }
 
 func (srv *Server) handleNickChange(origin string, args []string) {
@@ -147,12 +139,9 @@ func (srv *Server) handleNickChange(origin string, args []string) {
 		return
 	}
 
-	newNick := args[0]
 	oldNick := origin
-
-	for _, sv := range srv.services {
-		sv.OnNickChange(oldNick, newNick)
-	}
+	newNick := args[0]
+	srv.nickserv.OnNickChange(oldNick, newNick)
 }
 
 func (srv *Server) read() (string, error) {

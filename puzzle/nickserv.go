@@ -8,9 +8,8 @@ import (
 type nickservCmdHandler func(string, []string)
 
 type NickServ struct {
-	Service
+	Nick string
 	server *Server
-
 	handlers map[string]nickservCmdHandler
 
 	// Store a list, by nick, of users that have identified to NickServ.
@@ -22,6 +21,7 @@ type NickServ struct {
 
 func NewNickserv(server *Server) *NickServ {
 	ns := &NickServ{
+		Nick: "NickServ",
 		server: server,
 		identified: make(map[string]bool),
 	}
@@ -31,10 +31,6 @@ func NewNickserv(server *Server) *NickServ {
 	}
 
 	return ns
-}
-
-func (ns *NickServ) Nick() string {
-	return "NickServ"
 }
 
 func (ns *NickServ) OnPrivmsg(nick, content string) {
@@ -104,7 +100,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 }
 
 func (ns *NickServ) privmsg(recip, message string) {
-	ns.server.privmsg(ns.Nick(), recip, message)
+	ns.server.privmsg(ns.Nick, recip, message)
 }
 
 func (ns *NickServ) setIdentified(nick string) {
