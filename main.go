@@ -8,7 +8,7 @@ import (
 func main() {
 	// TODO - Load configuration values from a file
 	name := "noveria.0x-1.com"
-	addr := "localhost:6667"
+	addr := "localhost:6668"
 	pass := "foo"
 	pgUrl := "postgres://localhost/puzzle?sslmode=disable"
 

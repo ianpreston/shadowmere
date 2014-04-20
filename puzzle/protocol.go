@@ -79,3 +79,11 @@ func (srv *Server) nick(nick, user, host, real string) {
 func (srv *Server) pong(origin string) {
 	srv.write(fmt.Sprintf("PONG :%s\r\n", origin))
 }
+
+func (srv *Server) svsmode(origin, nick, modes string) {
+	srv.write(fmt.Sprintf(":%s SVS2MODE %s :%s\r\n", origin, nick, modes))
+}
+
+func (srv *Server) chghost(origin, nick, vhost string) {
+	srv.write(fmt.Sprintf(":%s AL %s :%s\r\n", origin, nick, vhost))
+}

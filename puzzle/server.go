@@ -4,6 +4,7 @@ import (
 	"net"
 	"fmt"
 	"bufio"
+	"strings"
 )
 
 type handler func(string, []string)
@@ -53,16 +54,16 @@ func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 }
 
 func (srv *Server) Start() {
-	srv.authenticateTS5()
+	srv.authenticateUnreal()
 	srv.initializeServices()
 	srv.listenLoop()
 }
 
-func (srv *Server) authenticateTS5() {
-	// Implements authentication that is compliant with the TS5
-	// protocol - but NOT compliant with RFC1459/RFC2813.
-	srv.write(fmt.Sprintf("PASS %s TS 5\r\n", srv.pass))
-	srv.write(fmt.Sprintf("SERVER %s 1 1 :%s\r\n", srv.name, srv.name))
+func (srv *Server) authenticateUnreal() {
+	// Implements UnrealIRCd-compatible aurhentication
+	srv.write(fmt.Sprintf("PASS :%s\r\n", srv.pass))
+	srv.write(fmt.Sprintf("PROTOCTL %s\r\n", "SJ3 NICKv2 NOQUIT"))
+	srv.write(fmt.Sprintf("SERVER %s 1 :%s\r\n", srv.name, "Services"))
 }
 
 func (srv *Server) initializeServices() {
@@ -113,7 +114,7 @@ func (srv *Server) handlePrivmsg(origin string, args []string) {
 
 	to := args[0]
 	msg := args[1]
-	if srv.nickserv.Nick == to {
+	if strings.ToLower(srv.nickserv.Nick) == strings.ToLower(to) {
 		srv.nickserv.OnPrivmsg(origin, msg)
 	}
 }
