@@ -15,12 +15,15 @@ type Server struct {
 	handlers map[string]handler
 	services []Service
 
+	// TODO - This really doesn't belong here
+	datastore *Datastore
+
 	name string
 	addr string
 	pass string
 }
 
-func NewServer(name, addr, pass string) (*Server, error) {
+func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -30,6 +33,8 @@ func NewServer(name, addr, pass string) (*Server, error) {
 	server := &Server{
 		conn: conn,
 		reader: reader,
+
+		datastore: ds,
 
 		name: name,
 		addr: addr,

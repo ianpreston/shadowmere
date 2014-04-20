@@ -3,6 +3,7 @@ package puzzle
 import (
 	"fmt"
 	"strings"
+	"time"
 )
 
 type nickservCmdHandler func(string, []string)
@@ -45,18 +46,48 @@ func (ns *NickServ) OnPrivmsg(nick, content string) {
 	}
 }
 
-func (ns *NickServ) handleIdentify(nick string, args []string) {
-	ns.privmsg(
-		nick,
-		fmt.Sprintf("IDENTIFY with arguments: %s", strings.Join(args, ",")),
-	)
-}
-
 func (ns *NickServ) handleRegister(nick string, args []string) {
 	ns.privmsg(
 		nick,
 		fmt.Sprintf("REGISTER with arguments: %s", strings.Join(args, ",")),
 	)
+
+	ns.server.write(fmt.Sprintf(
+		":%s SJOIN %v #%s + :%s\r\n",
+		ns.server.name,
+		time.Now().Unix(),
+		args[0],
+		ns.Nick(),
+	))
+	ns.server.write(fmt.Sprintf(
+		":%s PART #%s :NickServ\r\n",
+		ns.Nick(),
+		args[0],
+	))
+}
+
+func (ns *NickServ) handleIdentify(nick string, args []string) {
+	if len(args) != 1{
+		ns.privmsg(nick, "You must specify a password")
+		return
+	}
+
+	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	if err != nil {
+		// TODO - Handle error better
+		fmt.Errorf(err.Error())
+	}
+	if rn == nil {
+		ns.privmsg(nick, "This nickname is not registered")
+		return
+	}
+	
+	validPassword := ns.server.datastore.Authenticate(rn, args[0])
+	if validPassword {
+		ns.privmsg(nick, "You are now identified")
+	} else {
+		ns.privmsg(nick, "Invalid password for this nick")
+	}	
 }
 
 func (ns *NickServ) privmsg(recip, message string) {
