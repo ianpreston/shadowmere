@@ -85,7 +85,10 @@ func (srv *Server) listenLoop() {
 }
 
 func (srv *Server) handleLine(line string) {
-	command, origin, args := parseLine(line)
+	command, origin, args, err := parseMessage(line)
+	if err != nil {
+		fmt.Errorf("handleLine(): %s", err.Error())
+	}
 
 	h := srv.handlers[command]
 	if h != nil {
@@ -94,12 +97,18 @@ func (srv *Server) handleLine(line string) {
 }
 
 func (srv *Server) handlePing(origin string, args []string) {
-	// TODO - Malformed PINGs will cause a panic
+	if len(args) == 0 {
+		fmt.Errorf("handlePing(): Malformed PING!")
+	}
+
 	srv.write(fmt.Sprintf("PONG :%s\r\n", args[0]))
 }
 
 func (srv *Server) handlePrivmsg(origin string, args []string) {
-	// TODO - Malformed PRIVMSGs will cause a panic
+	if len(args) < 2 {
+		fmt.Errorf("handlePing(): Malformed PRIVMSG!")
+	}
+
 	to := args[0]
 	msg := args[1]
 	
@@ -113,11 +122,11 @@ func (srv *Server) handlePrivmsg(origin string, args []string) {
 func (srv *Server) read() (string, error) {
 	s, err := srv.reader.ReadString('\n')
 
-	fmt.Print("<-", s)
+	fmt.Printf("<-%s", s)
 	return s, err
 }
 
 func (srv *Server) write(s string) {
-	fmt.Print("->", s)
+	fmt.Printf("->%s", s)
 	fmt.Fprint(srv.conn, s)
 }

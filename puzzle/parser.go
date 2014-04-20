@@ -2,20 +2,23 @@ package puzzle
 
 import (
 	"strings"
+	"errors"
 )
 
+var MalformedMessage = errors.New("Malformed message")
 
-func parseLine(line string) (string, string, []string) {
+func parseMessage(line string) (string, string, []string, error) {
 	var command string
 	var origin string
 	var args []string
 
 	line = strings.Trim(line, " \r\n")
-	tokens := splitLine(line)
+	tokens := splitMessage(line)
 
 	if line[0] == ':' {
-		// TODO - Check bounds. A malformed message could cause a panic
-		// here.
+		if len(tokens) < 3 {
+			return "", "", nil, MalformedMessage
+		}
 		origin = strings.TrimPrefix(tokens[0], ":")
 		command = tokens[1]
 		args = tokens[2:]
@@ -26,10 +29,10 @@ func parseLine(line string) (string, string, []string) {
 		}
 	}
 	
-	return command, origin, args
+	return command, origin, args, nil
 }
 
-func splitLine(line string) []string {
+func splitMessage(line string) []string {
 	tokens := strings.Split(line, " ")
 
 	rightTokenIdx := -1
