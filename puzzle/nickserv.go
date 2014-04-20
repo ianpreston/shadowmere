@@ -3,7 +3,6 @@ package puzzle
 import (
 	"fmt"
 	"strings"
-	"time"
 )
 
 type nickservCmdHandler func(string, []string)
@@ -51,19 +50,6 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 		nick,
 		fmt.Sprintf("REGISTER with arguments: %s", strings.Join(args, ",")),
 	)
-
-	ns.server.write(fmt.Sprintf(
-		":%s SJOIN %v #%s + :%s\r\n",
-		ns.server.name,
-		time.Now().Unix(),
-		args[0],
-		ns.Nick(),
-	))
-	ns.server.write(fmt.Sprintf(
-		":%s PART #%s :NickServ\r\n",
-		ns.Nick(),
-		args[0],
-	))
 }
 
 func (ns *NickServ) handleIdentify(nick string, args []string) {
@@ -91,11 +77,5 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 }
 
 func (ns *NickServ) privmsg(recip, message string) {
-	line := fmt.Sprintf(
-		":%s PRIVMSG %s :%s\r\n",
-		ns.Nick(),
-		recip,
-		message,
-	)
-	ns.server.write(line)
+	ns.server.privmsg(ns.Nick(), recip, message)
 }

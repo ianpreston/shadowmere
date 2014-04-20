@@ -3,17 +3,19 @@ package puzzle
 import (
 	"strings"
 	"errors"
+	"fmt"
+	"time"
 )
 
 var MalformedMessage = errors.New("Malformed message")
 
-func parseMessage(line string) (string, string, []string, error) {
+func (srv *Server) parseMessage(line string) (string, string, []string, error) {
 	var command string
 	var origin string
 	var args []string
 
 	line = strings.Trim(line, " \r\n")
-	tokens := splitMessage(line)
+	tokens := srv.splitMessage(line)
 
 	if line[0] == ':' {
 		if len(tokens) < 3 {
@@ -32,7 +34,7 @@ func parseMessage(line string) (string, string, []string, error) {
 	return command, origin, args, nil
 }
 
-func splitMessage(line string) []string {
+func (srv *Server) splitMessage(line string) []string {
 	tokens := strings.Split(line, " ")
 
 	rightTokenIdx := -1
@@ -53,4 +55,27 @@ func splitMessage(line string) []string {
 	}
 
 	return tokens
+}
+
+func (srv *Server) privmsg(from, to, message string) {
+	cmd := fmt.Sprintf(":%s PRIVMSG %s :%s\r\n", from, to, message)
+	srv.write(cmd)
+}
+
+func (srv *Server) nick(nick, user, host, real string) {
+	// NICK <nick> <hops> <ts> <modes> <user> <host> <server> :<real>
+	cmd := fmt.Sprintf(
+		"NICK %s 1 %v +i %s %s %s :%s\r\n",
+		nick,
+		time.Now().Unix(),
+		user,
+		host,
+		srv.name,
+		real,
+	)
+	srv.write(cmd)
+}
+
+func (srv *Server) pong(origin string) {
+	srv.write(fmt.Sprintf("PONG :%s\r\n", origin))
 }

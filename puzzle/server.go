@@ -68,7 +68,7 @@ func (srv *Server) authenticateTS5() {
 
 func (srv *Server) initializeServices() {
 	for _, sv := range srv.services {
-		IdentifyService(sv, srv)
+		srv.nick(sv.Nick(), sv.Nick(), srv.name, "services")
 	}
 }
 
@@ -85,7 +85,7 @@ func (srv *Server) listenLoop() {
 }
 
 func (srv *Server) handleLine(line string) {
-	command, origin, args, err := parseMessage(line)
+	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
 		fmt.Errorf("handleLine(): %s", err.Error())
 	}
@@ -101,7 +101,7 @@ func (srv *Server) handlePing(origin string, args []string) {
 		fmt.Errorf("handlePing(): Malformed PING!")
 	}
 
-	srv.write(fmt.Sprintf("PONG :%s\r\n", args[0]))
+	srv.pong(args[0])
 }
 
 func (srv *Server) handlePrivmsg(origin string, args []string) {
