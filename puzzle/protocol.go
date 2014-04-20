@@ -84,6 +84,21 @@ func (srv *Server) svsmode(origin, nick, modes string) {
 	srv.write(fmt.Sprintf(":%s SVS2MODE %s :%s\r\n", origin, nick, modes))
 }
 
+func (srv *Server) svsnick(origin, old, new string) {
+	cmd := fmt.Sprintf(
+		":%s SVSNICK %s %s :%v\r\n",
+		origin,
+		old,
+		new,
+		time.Now().Unix(),
+	)
+	srv.write(cmd)
+}
+
+func (srv *Server) svskill(origin, nick, reason string) {
+	srv.write(fmt.Sprintf(":%s h %s :%s\r\n", origin, nick, reason))
+}
+
 func (srv *Server) chghost(origin, nick, vhost string) {
 	srv.write(fmt.Sprintf(":%s AL %s :%s\r\n", origin, nick, vhost))
 }

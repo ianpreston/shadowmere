@@ -28,6 +28,7 @@ func NewNickserv(server *Server) *NickServ {
 	ns.handlers = map[string]nickservCmdHandler{
 		"REGISTER": ns.handleRegister,
 		"IDENTIFY": ns.handleIdentify,
+		"KILL": ns.handleKill,
 	}
 
 	return ns
@@ -81,6 +82,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Errorf(err.Error())
+		return
 	}
 	if rn == nil {
 		ns.privmsg(nick, "This nickname is not registered")
@@ -93,6 +95,34 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	} else {
 		ns.privmsg(nick, "Invalid password for this nick")
 	}	
+}
+
+func (ns *NickServ) handleKill(nick string, args []string) {
+	if len(args) != 1 {
+		ns.privmsg(nick, "You must specify a nickname to kill")
+		return
+	}
+
+	target := args[0]
+	if ns.isIdentified(target) {
+		ns.privmsg(nick, "That user has identified!")
+		return
+	}
+
+	rn, err := ns.server.datastore.GetRegisteredNick(target)
+	if err != nil {
+		// TODO - Handle error better
+		fmt.Errorf(err.Error())
+		return
+	}
+	if rn == nil {
+		ns.privmsg(nick, "This nickname is not registered")
+		return
+	}
+
+	ns.server.svskill(ns.Nick, target, "Killed by Services: Nickname is registered")
+	ns.server.svsnick(ns.Nick, nick, target)
+	ns.privmsg(target, "Your nickname has been changed to " + target)
 }
 
 func (ns *NickServ) userIdentified(nick string) {
@@ -113,4 +143,3 @@ func (ns *NickServ) isIdentified(nick string) bool {
 func (ns *NickServ) privmsg(recip, message string) {
 	ns.server.privmsg(ns.Nick, recip, message)
 }
-
