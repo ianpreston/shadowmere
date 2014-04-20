@@ -44,6 +44,8 @@ func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 	server.handlers = map[string]handler{
 		"PING": server.handlePing,
 		"PRIVMSG": server.handlePrivmsg,
+		"QUIT": server.handleQuit,
+		"NICK": server.handleNickChange,
 	}
 
 	server.services = []Service{
@@ -88,6 +90,7 @@ func (srv *Server) handleLine(line string) {
 	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
 		fmt.Errorf("handleLine(): %s", err.Error())
+		return
 	}
 
 	h := srv.handlers[command]
@@ -99,6 +102,7 @@ func (srv *Server) handleLine(line string) {
 func (srv *Server) handlePing(origin string, args []string) {
 	if len(args) == 0 {
 		fmt.Errorf("handlePing(): Malformed PING!")
+		return
 	}
 
 	srv.pong(args[0])
@@ -107,6 +111,7 @@ func (srv *Server) handlePing(origin string, args []string) {
 func (srv *Server) handlePrivmsg(origin string, args []string) {
 	if len(args) < 2 {
 		fmt.Errorf("handlePing(): Malformed PRIVMSG!")
+		return
 	}
 
 	to := args[0]
@@ -116,6 +121,37 @@ func (srv *Server) handlePrivmsg(origin string, args []string) {
 		if sv.Nick() == to {
 			sv.OnPrivmsg(origin, msg)
 		}
+	}
+}
+
+func (srv *Server) handleQuit(origin string, args []string) {
+	var msg string
+	if len(args) > 0 {
+		msg = args[0]
+	}
+
+	for _, sv := range srv.services {
+		sv.OnQuit(origin, msg)
+	}
+}
+
+func (srv *Server) handleNickChange(origin string, args []string) {
+	if origin == "" {
+		// If not origin is set, this is a server-NICK, introducting a
+		// new user. We're not interested in these, only the other kind
+		// of NICK, which is a nickchange.
+		return
+	}
+	if len(args) < 1 {
+		fmt.Errorf("handleNickChange(): Malformed NICK!")
+		return
+	}
+
+	newNick := args[0]
+	oldNick := origin
+
+	for _, sv := range srv.services {
+		sv.OnNickChange(oldNick, newNick)
 	}
 }
 

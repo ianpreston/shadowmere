@@ -10,12 +10,20 @@ type nickservCmdHandler func(string, []string)
 type NickServ struct {
 	Service
 	server *Server
+
 	handlers map[string]nickservCmdHandler
+
+	// Store a list, by nick, of users that have identified to NickServ.
+	// In a production system, we would probably keep track of all users
+	// on the network and whether they are identified. However, in this
+	// case, simply tracking identified users is sufficient.
+	identified map[string]bool
 }
 
 func NewNickserv(server *Server) *NickServ {
 	ns := &NickServ{
 		server: server,
+		identified: make(map[string]bool),
 	}
 	ns.handlers = map[string]nickservCmdHandler{
 		"REGISTER": ns.handleRegister,
@@ -30,6 +38,8 @@ func (ns *NickServ) Nick() string {
 }
 
 func (ns *NickServ) OnPrivmsg(nick, content string) {
+	nick = strings.ToLower(nick)
+
 	tokens := strings.Split(content, " ")
 	command := tokens[0]
 	var args []string
@@ -45,6 +55,18 @@ func (ns *NickServ) OnPrivmsg(nick, content string) {
 	}
 }
 
+func (ns *NickServ) OnQuit(nick, quitMessage string) {
+	ns.unsetIdentified(nick)
+}
+
+func (ns *NickServ) OnNickChange(oldNick, newNick string) {
+	if ns.getIdentified(oldNick) {
+		ns.privmsg(newNick, "You are no longer identified")
+	}
+
+	ns.unsetIdentified(oldNick)
+}
+
 func (ns *NickServ) handleRegister(nick string, args []string) {
 	ns.privmsg(
 		nick,
@@ -55,6 +77,10 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 func (ns *NickServ) handleIdentify(nick string, args []string) {
 	if len(args) != 1{
 		ns.privmsg(nick, "You must specify a password")
+		return
+	}
+	if ns.identified[nick] == true {
+		ns.privmsg(nick, "You are already identified")
 		return
 	}
 
@@ -70,6 +96,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	
 	validPassword := ns.server.datastore.Authenticate(rn, args[0])
 	if validPassword {
+		ns.setIdentified(nick)
 		ns.privmsg(nick, "You are now identified")
 	} else {
 		ns.privmsg(nick, "Invalid password for this nick")
@@ -78,4 +105,16 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 
 func (ns *NickServ) privmsg(recip, message string) {
 	ns.server.privmsg(ns.Nick(), recip, message)
+}
+
+func (ns *NickServ) setIdentified(nick string) {
+	ns.identified[nick] = true
+}
+
+func (ns *NickServ) unsetIdentified(nick string) {
+	delete(ns.identified, nick)
+}
+
+func (ns *NickServ) getIdentified(nick string) bool {
+	return ns.identified[nick] == true
 }
