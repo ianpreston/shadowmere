@@ -52,15 +52,12 @@ func (ns *NickServ) OnPrivmsg(nick, content string) {
 }
 
 func (ns *NickServ) OnQuit(nick, quitMessage string) {
-	ns.unsetIdentified(nick)
+	ns.userUnIdentified(nick)
 }
 
 func (ns *NickServ) OnNickChange(oldNick, newNick string) {
-	if ns.getIdentified(oldNick) {
-		ns.privmsg(newNick, "You are no longer identified")
-	}
-
-	ns.unsetIdentified(oldNick)
+	ns.userUnIdentified(oldNick)
+	ns.server.svsmode(ns.Nick, newNick, "-r")
 }
 
 func (ns *NickServ) handleRegister(nick string, args []string) {
@@ -75,7 +72,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		ns.privmsg(nick, "You must specify a password")
 		return
 	}
-	if ns.identified[nick] == true {
+	if ns.isIdentified(nick) {
 		ns.privmsg(nick, "You are already identified")
 		return
 	}
@@ -92,25 +89,28 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	
 	validPassword := ns.server.datastore.Authenticate(rn, args[0])
 	if validPassword {
-		ns.setIdentified(nick)
-		ns.privmsg(nick, "You are now identified")
+		ns.userIdentified(nick)
 	} else {
 		ns.privmsg(nick, "Invalid password for this nick")
 	}	
+}
+
+func (ns *NickServ) userIdentified(nick string) {
+	ns.identified[nick] = true
+	ns.server.svsmode(ns.Nick, nick, "+r")
+	ns.server.chghost(ns.Nick, nick, "registered." + nick)
+	ns.privmsg(nick, "You are now identified")
+}
+
+func (ns *NickServ) userUnIdentified(nick string) {
+	delete(ns.identified, nick)
+}
+
+func (ns *NickServ) isIdentified(nick string) bool {
+	return ns.identified[nick] == true
 }
 
 func (ns *NickServ) privmsg(recip, message string) {
 	ns.server.privmsg(ns.Nick, recip, message)
 }
 
-func (ns *NickServ) setIdentified(nick string) {
-	ns.identified[nick] = true
-}
-
-func (ns *NickServ) unsetIdentified(nick string) {
-	delete(ns.identified, nick)
-}
-
-func (ns *NickServ) getIdentified(nick string) bool {
-	return ns.identified[nick] == true
-}
