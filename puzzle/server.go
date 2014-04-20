@@ -11,7 +11,9 @@ type handler func(string, []string)
 type Server struct {
 	conn net.Conn
 	reader *bufio.Reader
+
 	handlers map[string]handler
+	services []Service
 
 	name string
 	addr string
@@ -39,8 +41,13 @@ func NewServer() (*Server, error) {
 		pass: pass,
 	}
 
-	server.handlers = map[string]func([]string){
+	server.handlers = map[string]handler{
 		"PING": server.handlePing,
+		"PRIVMSG": server.handlePrivmsg,
+	}
+
+	server.services = []Service{
+		NewNickserv(server),
 	}
 
 	return server, nil
@@ -48,6 +55,7 @@ func NewServer() (*Server, error) {
 
 func (srv *Server) Start() {
 	srv.authenticateTS5()
+	srv.initializeServices()
 	srv.listenLoop()
 }
 
@@ -56,6 +64,12 @@ func (srv *Server) authenticateTS5() {
 	// protocol - but NOT compliant with RFC1459/RFC2813.
 	srv.write(fmt.Sprintf("PASS %s TS 5\r\n", srv.pass))
 	srv.write(fmt.Sprintf("SERVER %s 1 1 :%s\r\n", srv.name, srv.name))
+}
+
+func (srv *Server) initializeServices() {
+	for _, sv := range srv.services {
+		IdentifyService(sv, srv)
+	}
 }
 
 func (srv *Server) listenLoop() {
@@ -80,11 +94,20 @@ func (srv *Server) handleLine(line string) {
 }
 
 func (srv *Server) handlePing(origin string, args []string) {
-	// TODO - It is possible a server could send a "PING" with
-	// no server argument.
+	// TODO - Malformed PINGs will cause a panic
 	srv.write(fmt.Sprintf("PONG :%s\r\n", args[0]))
 }
 
+func (srv *Server) handlePrivmsg(origin string, args []string) {
+	// TODO - Malformed PRIVMSGs will cause a panic
+	to := args[0]
+	msg := args[1]
+	
+	for _, sv := range srv.services {
+		if sv.Nick() == to {
+			sv.OnPrivmsg(origin, msg)
+		}
+	}
 }
 
 func (srv *Server) read() (string, error) {
