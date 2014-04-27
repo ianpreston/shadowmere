@@ -79,10 +79,36 @@ func (ns *NickServ) OnNickChange(oldNick, newNick string) {
 }
 
 func (ns *NickServ) handleRegister(nick string, args []string) {
-	ns.notice(
-		nick,
-		fmt.Sprintf("REGISTER with arguments: %s", strings.Join(args, ",")),
-	)
+	if len(args) != 2 {
+		ns.notice(nick, "Syntax: REIGSTER <email> <password>")
+		return
+	}
+
+	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	if err != nil {
+		// TODO - Handle error better
+		fmt.Errorf(err.Error())
+		return
+	}
+	if rn != nil {
+		ns.notice(nick, "That nickname is already registered.")
+		return
+	}
+
+	newRn := &RegisteredNick{
+		Nick: nick,
+		Email: args[0],
+		Passwd: args[1],
+	}
+	err = ns.server.datastore.Register(newRn)
+	if err != nil {
+		ns.notice(nick, "Error registering nickname")
+		fmt.Printf("***ERROR*** %s\n", err.Error())
+		return
+	}
+
+	ns.notice(nick, "Your nickname is now registered!")
+	ns.userIdentified(nick)
 }
 
 func (ns *NickServ) handleIdentify(nick string, args []string) {
@@ -135,7 +161,6 @@ func (ns *NickServ) enforceIdentifiedNick(nick string) {
 	if ns.killLocks[nick] == true {
 		// This nick already has a goroutine spawned waiting to svsnick
 		// it, so don't spawn a new one.
-		fmt.Println("*** Not spawning a new goroutine!")
 		return
 	}
 	ns.killLocks[nick] = true

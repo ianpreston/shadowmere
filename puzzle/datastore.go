@@ -55,3 +55,23 @@ func (ds *Datastore) Authenticate(rn *RegisteredNick, passwd string) bool {
 		return false
 	}
 }
+
+func (ds *Datastore) Register(rn *RegisteredNick) error {
+	passwd, err := bcrypt.GenerateFromPassword([]byte(rn.Passwd), 12)
+	if err != nil {
+		return err
+	}
+
+	var registeredNickId int
+	err = ds.db.QueryRow(
+		"INSERT INTO RegisteredNicks (nick, email, passwd) VALUES ($1, $2, $3) RETURNING id;",
+		rn.Nick,
+		rn.Email,
+		passwd,
+	).Scan(&registeredNickId)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
