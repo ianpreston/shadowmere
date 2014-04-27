@@ -87,7 +87,7 @@ func (srv *Server) listenLoop() {
 func (srv *Server) handleLine(line string) {
 	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
-		fmt.Errorf("handleLine(): %s", err.Error())
+		fmt.Println("handleLine(): %s", err.Error())
 		return
 	}
 
@@ -99,7 +99,7 @@ func (srv *Server) handleLine(line string) {
 
 func (srv *Server) handlePing(origin string, args []string) {
 	if len(args) == 0 {
-		fmt.Errorf("handlePing(): Malformed PING!")
+		fmt.Println("handlePing(): Malformed PING!")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (srv *Server) handlePing(origin string, args []string) {
 
 func (srv *Server) handlePrivmsg(origin string, args []string) {
 	if len(args) < 2 {
-		fmt.Errorf("handlePing(): Malformed PRIVMSG!")
+		fmt.Println("handlePing(): Malformed PRIVMSG!")
 		return
 	}
 
@@ -142,7 +142,7 @@ func (srv *Server) handleNick(origin string, args []string) {
 
 func (srv *Server) handleNewNick(args []string) {
 	if len(args) < 1 {
-		fmt.Errorf("handleNewNick(): Malformed NICKv2!")
+		fmt.Println("handleNewNick(): Malformed NICKv2!")
 		return
 	}
 
@@ -152,7 +152,7 @@ func (srv *Server) handleNewNick(args []string) {
 
 func (srv *Server) handleNickChange(origin string, args []string) {
 	if len(args) < 1 {
-		fmt.Errorf("handleNickChange(): Malformed NICK!")
+		fmt.Println("handleNickChange(): Malformed NICK!")
 		return
 	}
 

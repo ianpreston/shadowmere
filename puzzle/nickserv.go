@@ -87,7 +87,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 	rn, err := ns.server.datastore.GetRegisteredNick(nick)
 	if err != nil {
 		// TODO - Handle error better
-		fmt.Errorf(err.Error())
+		fmt.Printf("***ERROR*** %v\n", err.Error())
 		return
 	}
 	if rn != nil {
@@ -124,7 +124,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	rn, err := ns.server.datastore.GetRegisteredNick(nick)
 	if err != nil {
 		// TODO - Handle error better
-		fmt.Errorf(err.Error())
+		fmt.Printf("***ERROR*** %v\n", err.Error())
 		return
 	}
 	if rn == nil {
@@ -144,7 +144,7 @@ func (ns *NickServ) handleRegisteredNick(nick string) {
 	rn, err := ns.server.datastore.GetRegisteredNick(nick)
 	if err != nil {
 		// TODO - Handle error better
-		fmt.Errorf(err.Error())
+		fmt.Printf("***ERROR*** %v\n", err.Error())
 		return
 	}
 	if rn == nil {
