@@ -49,7 +49,7 @@ func (ns *NickServ) OnPrivmsg(nick, content string) {
 	nick = strings.ToLower(nick)
 
 	tokens := strings.Split(content, " ")
-	command := tokens[0]
+	command := strings.ToUpper(tokens[0])
 	var args []string
 	if len(tokens) > 1 {
 		args = tokens[1:]
