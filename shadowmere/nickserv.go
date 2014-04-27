@@ -1,4 +1,4 @@
-package puzzle
+package shadowmere
 
 import (
 	"fmt"

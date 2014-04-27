@@ -1,4 +1,4 @@
-package puzzle
+package shadowmere
 
 import (
 	_ "github.com/lib/pq"
