@@ -6,6 +6,7 @@ import (
 	"time"
 	"math/rand"
 	"strconv"
+	"sync"
 )
 
 type nickservCmdHandler func(string, []string)
@@ -22,6 +23,10 @@ type NickServ struct {
 	// on the network and whether they are identified. However, in this
 	// case, simply tracking identified users is sufficient.
 	identified map[string]bool
+
+	// Locking for nicks that are awaiting being killed
+	killLocks map[string]bool
+	killLocksLock sync.Mutex
 }
 
 func NewNickserv(server *Server) *NickServ {
@@ -30,6 +35,7 @@ func NewNickserv(server *Server) *NickServ {
 		server: server,
 		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		identified: make(map[string]bool),
+		killLocks: make(map[string]bool),
 	}
 	ns.handlers = map[string]nickservCmdHandler{
 		"REGISTER": ns.handleRegister,
@@ -124,15 +130,28 @@ func (ns *NickServ) handleRegisteredNick(nick string) {
 }
 
 func (ns *NickServ) enforceIdentifiedNick(nick string) {
-	// TODO - Lock a given nick for this method
+	ns.killLocksLock.Lock()
+	defer ns.killLocksLock.Unlock()
+	if ns.killLocks[nick] == true {
+		// This nick already has a goroutine spawned waiting to svsnick
+		// it, so don't spawn a new one.
+		fmt.Println("*** Not spawning a new goroutine!")
+		return
+	}
+	ns.killLocks[nick] = true
 
 	go func() {
 		time.Sleep(60 * time.Second)
+
+		ns.killLocksLock.Lock()
+		defer ns.killLocksLock.Unlock()
 
 		if ns.identified[nick] != true {
 			newNick := ns.svsnick(nick)
 			ns.notice(newNick, "Your nickname has been changed because you did not identify")
 		}
+
+		delete(ns.killLocks, nick)
 	}()
 }
 
