@@ -62,6 +62,11 @@ func (srv *Server) privmsg(from, to, message string) {
 	srv.write(cmd)
 }
 
+func (srv *Server) notice(from, to, message string) {
+	cmd := fmt.Sprintf(":%s NOTICE %s :%s\r\n", from, to, message)
+	srv.write(cmd)
+}
+
 func (srv *Server) nick(nick, user, host, real string) {
 	// NICK <nick> <hops> <ts> <modes> <user> <host> <server> :<real>
 	cmd := fmt.Sprintf(

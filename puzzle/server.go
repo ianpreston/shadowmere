@@ -47,7 +47,7 @@ func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 		"PING": server.handlePing,
 		"PRIVMSG": server.handlePrivmsg,
 		"QUIT": server.handleQuit,
-		"NICK": server.handleNickChange,
+		"NICK": server.handleNick,
 	}
 
 	return server, nil
@@ -128,13 +128,29 @@ func (srv *Server) handleQuit(origin string, args []string) {
 	srv.nickserv.OnQuit(origin, msg)
 }
 
-func (srv *Server) handleNickChange(origin string, args []string) {
+func (srv *Server) handleNick(origin string, args []string) {
 	if origin == "" {
-		// If not origin is set, this is a server-NICK, introducting a
-		// new user. We're not interested in these, only the other kind
-		// of NICK, which is a nickchange.
+		// Server introducing a new user
+		// nick hopcount timestamp	username hostname server servicestamp +usermodes virtualhost :realname
+		srv.handleNewNick(args)
+	} else {
+		// User changing their nick
+		// :old nick new timestamp
+		srv.handleNickChange(origin, args)
+	}
+}
+
+func (srv *Server) handleNewNick(args []string) {
+	if len(args) < 1 {
+		fmt.Errorf("handleNewNick(): Malformed NICKv2!")
 		return
 	}
+
+	newNick := args[0]
+	srv.nickserv.OnNewNick(newNick)
+}
+
+func (srv *Server) handleNickChange(origin string, args []string) {
 	if len(args) < 1 {
 		fmt.Errorf("handleNickChange(): Malformed NICK!")
 		return

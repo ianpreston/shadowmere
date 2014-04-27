@@ -56,9 +56,15 @@ func (ns *NickServ) OnQuit(nick, quitMessage string) {
 	ns.userUnIdentified(nick)
 }
 
+func (ns *NickServ) OnNewNick(nick string) {
+	ns.notifyRegisteredNick(nick)
+}
+
 func (ns *NickServ) OnNickChange(oldNick, newNick string) {
 	ns.userUnIdentified(oldNick)
 	ns.server.svsmode(ns.Nick, newNick, "-r")
+
+	ns.notifyRegisteredNick(newNick)
 }
 
 func (ns *NickServ) handleRegister(nick string, args []string) {
@@ -125,6 +131,20 @@ func (ns *NickServ) handleKill(nick string, args []string) {
 	ns.privmsg(target, "Your nickname has been changed to " + target)
 }
 
+func (ns *NickServ) notifyRegisteredNick(nick string) {
+	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	if err != nil {
+		// TODO - Handle error better
+		fmt.Errorf(err.Error())
+		return
+	}
+	if rn == nil {
+		return
+	}
+
+	ns.notice(nick, "Your nickname is registered. Please identify to services or change your nick.")
+}
+
 func (ns *NickServ) userIdentified(nick string) {
 	ns.identified[nick] = true
 	ns.server.svsmode(ns.Nick, nick, "+r")
@@ -142,4 +162,8 @@ func (ns *NickServ) isIdentified(nick string) bool {
 
 func (ns *NickServ) privmsg(recip, message string) {
 	ns.server.privmsg(ns.Nick, recip, message)
+}
+
+func (ns *NickServ) notice(recip, message string) {
+	ns.server.notice(ns.Nick, recip, message)
 }
