@@ -3,6 +3,9 @@ package puzzle
 import (
 	"fmt"
 	"strings"
+	"time"
+	"math/rand"
+	"strconv"
 )
 
 type nickservCmdHandler func(string, []string)
@@ -11,6 +14,8 @@ type NickServ struct {
 	Nick string
 	server *Server
 	handlers map[string]nickservCmdHandler
+
+	rand *rand.Rand
 
 	// Store a list, by nick, of users that have identified to NickServ.
 	// In a production system, we would probably keep track of all users
@@ -23,12 +28,12 @@ func NewNickserv(server *Server) *NickServ {
 	ns := &NickServ{
 		Nick: "NickServ",
 		server: server,
+		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		identified: make(map[string]bool),
 	}
 	ns.handlers = map[string]nickservCmdHandler{
 		"REGISTER": ns.handleRegister,
 		"IDENTIFY": ns.handleIdentify,
-		"KILL": ns.handleKill,
 	}
 
 	return ns
@@ -48,7 +53,7 @@ func (ns *NickServ) OnPrivmsg(nick, content string) {
 	if h != nil {
 		h(nick, args)
 	} else {
-		ns.privmsg(nick, fmt.Sprintf("No such command: %s", command))
+		ns.notice(nick, fmt.Sprintf("No such command: %s", command))
 	}
 }
 
@@ -57,18 +62,18 @@ func (ns *NickServ) OnQuit(nick, quitMessage string) {
 }
 
 func (ns *NickServ) OnNewNick(nick string) {
-	ns.notifyRegisteredNick(nick)
+	ns.handleRegisteredNick(nick)
 }
 
 func (ns *NickServ) OnNickChange(oldNick, newNick string) {
 	ns.userUnIdentified(oldNick)
 	ns.server.svsmode(ns.Nick, newNick, "-r")
 
-	ns.notifyRegisteredNick(newNick)
+	ns.handleRegisteredNick(newNick)
 }
 
 func (ns *NickServ) handleRegister(nick string, args []string) {
-	ns.privmsg(
+	ns.notice(
 		nick,
 		fmt.Sprintf("REGISTER with arguments: %s", strings.Join(args, ",")),
 	)
@@ -76,11 +81,11 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 
 func (ns *NickServ) handleIdentify(nick string, args []string) {
 	if len(args) != 1{
-		ns.privmsg(nick, "You must specify a password")
+		ns.notice(nick, "You must specify a password")
 		return
 	}
 	if ns.isIdentified(nick) {
-		ns.privmsg(nick, "You are already identified")
+		ns.notice(nick, "You are already identified")
 		return
 	}
 
@@ -91,7 +96,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		return
 	}
 	if rn == nil {
-		ns.privmsg(nick, "This nickname is not registered")
+		ns.notice(nick, "This nickname is not registered")
 		return
 	}
 	
@@ -99,39 +104,11 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 	if validPassword {
 		ns.userIdentified(nick)
 	} else {
-		ns.privmsg(nick, "Invalid password for this nick")
+		ns.notice(nick, "Invalid password for this nick")
 	}	
 }
 
-func (ns *NickServ) handleKill(nick string, args []string) {
-	if len(args) != 1 {
-		ns.privmsg(nick, "You must specify a nickname to kill")
-		return
-	}
-
-	target := args[0]
-	if ns.isIdentified(target) {
-		ns.privmsg(nick, "That user has identified!")
-		return
-	}
-
-	rn, err := ns.server.datastore.GetRegisteredNick(target)
-	if err != nil {
-		// TODO - Handle error better
-		fmt.Errorf(err.Error())
-		return
-	}
-	if rn == nil {
-		ns.privmsg(nick, "This nickname is not registered")
-		return
-	}
-
-	ns.server.svskill(ns.Nick, target, "Killed by Services: Nickname is registered")
-	ns.server.svsnick(ns.Nick, nick, target)
-	ns.privmsg(target, "Your nickname has been changed to " + target)
-}
-
-func (ns *NickServ) notifyRegisteredNick(nick string) {
+func (ns *NickServ) handleRegisteredNick(nick string) {
 	rn, err := ns.server.datastore.GetRegisteredNick(nick)
 	if err != nil {
 		// TODO - Handle error better
@@ -142,14 +119,34 @@ func (ns *NickServ) notifyRegisteredNick(nick string) {
 		return
 	}
 
-	ns.notice(nick, "Your nickname is registered. Please identify to services or change your nick.")
+	ns.notice(nick, "Your nickname is registered. You have 60 seconds to identify or change your nick.")
+	ns.enforceIdentifiedNick(nick)
+}
+
+func (ns *NickServ) enforceIdentifiedNick(nick string) {
+	// TODO - Lock a given nick for this method
+
+	go func() {
+		time.Sleep(60 * time.Second)
+
+		if ns.identified[nick] != true {
+			newNick := ns.svsnick(nick)
+			ns.notice(newNick, "Your nickname has been changed because you did not identify")
+		}
+	}()
+}
+
+func (ns *NickServ) svsnick(nick string) string {
+	newNick := "User" + strconv.Itoa(ns.rand.Int())
+	ns.server.svsnick(ns.Nick, nick, newNick)
+	return newNick
 }
 
 func (ns *NickServ) userIdentified(nick string) {
 	ns.identified[nick] = true
 	ns.server.svsmode(ns.Nick, nick, "+r")
 	ns.server.chghost(ns.Nick, nick, "registered." + nick)
-	ns.privmsg(nick, "You are now identified")
+	ns.notice(nick, "You are now identified")
 }
 
 func (ns *NickServ) userUnIdentified(nick string) {
@@ -158,10 +155,6 @@ func (ns *NickServ) userUnIdentified(nick string) {
 
 func (ns *NickServ) isIdentified(nick string) bool {
 	return ns.identified[nick] == true
-}
-
-func (ns *NickServ) privmsg(recip, message string) {
-	ns.server.privmsg(ns.Nick, recip, message)
 }
 
 func (ns *NickServ) notice(recip, message string) {
