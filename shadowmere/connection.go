@@ -9,71 +9,65 @@ import (
 
 type handler func(string, []string)
 
-type Server struct {
+type Connection struct {
+	mere *Services
+
 	conn net.Conn
 	reader *bufio.Reader
 
 	handlers map[string]handler
 	
-	nickserv *NickServ
-
-	datastore *Datastore
-	curstate *CurState
-
 	name string
 	addr string
 	pass string
 }
 
-func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
+func NewConnection(mere *Services, name, addr, pass string) (*Connection, error) {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 	reader := bufio.NewReader(conn)
 
-	server := &Server{
+	srv := &Connection{
+		mere: mere,
+
 		conn: conn,
 		reader: reader,
-
-		datastore: ds,
-		curstate: NewCurState(),
 
 		name: name,
 		addr: addr,
 		pass: pass,
 	}
-
-	server.handlers = map[string]handler{
-		"PING": server.handlePing,
-		"PRIVMSG": server.handlePrivmsg,
-		"QUIT": server.handleQuit,
-		"NICK": server.handleNick,
+	srv.handlers = map[string]handler{
+		"PING": srv.handlePing,
+		"PRIVMSG": srv.handlePrivmsg,
+		"QUIT": srv.handleQuit,
+		"NICK": srv.handleNick,
 	}
 
-	return server, nil
+	return srv, nil
 }
 
-func (srv *Server) Start() {
+func (srv *Connection) Start() {
 	srv.authenticateUnreal()
 	srv.initializeServices()
 	srv.listenLoop()
 }
 
-func (srv *Server) authenticateUnreal() {
+func (srv *Connection) authenticateUnreal() {
 	// Implements UnrealIRCd-compatible aurhentication
 	srv.write(fmt.Sprintf("PASS :%s\r\n", srv.pass))
 	srv.write(fmt.Sprintf("PROTOCTL %s\r\n", "SJ3 NICKv2 NOQUIT"))
 	srv.write(fmt.Sprintf("SERVER %s 1 :%s\r\n", srv.name, "Services"))
 }
 
-func (srv *Server) initializeServices() {
-	ns := NewNickserv(srv)
+func (srv *Connection) initializeServices() {
+	ns := srv.mere.nickserv
 	srv.nick(ns.Nick, ns.Nick, srv.name, "Services")
-	srv.nickserv = ns
 }
 
-func (srv *Server) listenLoop() {
+func (srv *Connection) listenLoop() {
 	for {
 		line, err := srv.read()
 		if err != nil {
@@ -85,7 +79,7 @@ func (srv *Server) listenLoop() {
 	}
 }
 
-func (srv *Server) handleLine(line string) {
+func (srv *Connection) handleLine(line string) {
 	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
 		fmt.Println("handleLine(): %s", err.Error())
@@ -98,7 +92,7 @@ func (srv *Server) handleLine(line string) {
 	}
 }
 
-func (srv *Server) handlePing(origin string, args []string) {
+func (srv *Connection) handlePing(origin string, args []string) {
 	if len(args) == 0 {
 		fmt.Println("handlePing(): Malformed PING!")
 		return
@@ -107,7 +101,7 @@ func (srv *Server) handlePing(origin string, args []string) {
 	srv.pong(args[0])
 }
 
-func (srv *Server) handlePrivmsg(origin string, args []string) {
+func (srv *Connection) handlePrivmsg(origin string, args []string) {
 	if len(args) < 2 {
 		fmt.Println("handlePing(): Malformed PRIVMSG!")
 		return
@@ -115,21 +109,21 @@ func (srv *Server) handlePrivmsg(origin string, args []string) {
 
 	to := args[0]
 	msg := args[1]
-	if strings.ToLower(srv.nickserv.Nick) == strings.ToLower(to) {
-		srv.nickserv.OnPrivmsg(origin, msg)
+	if strings.ToLower(srv.mere.nickserv.Nick) == strings.ToLower(to) {
+		srv.mere.nickserv.OnPrivmsg(origin, msg)
 	}
 }
 
-func (srv *Server) handleQuit(origin string, args []string) {
+func (srv *Connection) handleQuit(origin string, args []string) {
 	var msg string
 	if len(args) > 0 {
 		msg = args[0]
 	}
 
-	srv.nickserv.OnQuit(origin, msg)
+	srv.mere.nickserv.OnQuit(origin, msg)
 }
 
-func (srv *Server) handleNick(origin string, args []string) {
+func (srv *Connection) handleNick(origin string, args []string) {
 	if origin == "" {
 		// Server introducing a new user
 		// nick hopcount timestamp	username hostname server servicestamp +usermodes virtualhost :realname
@@ -141,17 +135,17 @@ func (srv *Server) handleNick(origin string, args []string) {
 	}
 }
 
-func (srv *Server) handleNewNick(args []string) {
+func (srv *Connection) handleNewNick(args []string) {
 	if len(args) < 1 {
 		fmt.Println("handleNewNick(): Malformed NICKv2!")
 		return
 	}
 
 	newNick := args[0]
-	srv.nickserv.OnNewNick(newNick)
+	srv.mere.nickserv.OnNewNick(newNick)
 }
 
-func (srv *Server) handleNickChange(origin string, args []string) {
+func (srv *Connection) handleNickChange(origin string, args []string) {
 	if len(args) < 1 {
 		fmt.Println("handleNickChange(): Malformed NICK!")
 		return
@@ -159,17 +153,17 @@ func (srv *Server) handleNickChange(origin string, args []string) {
 
 	oldNick := origin
 	newNick := args[0]
-	srv.nickserv.OnNickChange(oldNick, newNick)
+	srv.mere.nickserv.OnNickChange(oldNick, newNick)
 }
 
-func (srv *Server) read() (string, error) {
+func (srv *Connection) read() (string, error) {
 	s, err := srv.reader.ReadString('\n')
 
 	fmt.Printf("<-%s", s)
 	return s, err
 }
 
-func (srv *Server) write(s string) {
+func (srv *Connection) write(s string) {
 	fmt.Printf("->%s", s)
 	fmt.Fprint(srv.conn, s)
 }

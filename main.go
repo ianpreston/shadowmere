@@ -12,15 +12,15 @@ func main() {
 	pass := "foo"
 	pgUrl := "postgres://localhost/shadowmere?sslmode=disable"
 
-	datastore, err := shadowmere.NewDatastore(pgUrl)
+	mere, err := shadowmere.NewServices(
+		pgUrl,
+		name,
+		addr,
+		pass,
+	)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	server, err := shadowmere.NewServer(name, addr, pass, datastore)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	server.Start()
+	mere.Start()
 }

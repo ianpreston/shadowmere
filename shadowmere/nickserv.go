@@ -12,19 +12,17 @@ type nickservCmdHandler func(string, []string)
 
 type NickServ struct {
 	Nick string
-	server *Server
+	mere *Services
 
 	handlers map[string]nickservCmdHandler
 
-	repo *RegisteredNickRepo
 	rand *rand.Rand
 }
 
-func NewNickserv(server *Server) *NickServ {
+func NewNickserv(mere *Services) *NickServ {
 	ns := &NickServ{
 		Nick: "NickServ",
-		server: server,
-		repo: server.datastore.RegisteredNicks,
+		mere: mere,
 		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 	ns.handlers = map[string]nickservCmdHandler{
@@ -63,7 +61,7 @@ func (ns *NickServ) OnNewNick(nick string) {
 
 func (ns *NickServ) OnNickChange(oldNick, newNick string) {
 	ns.unidentifyUser(oldNick)
-	ns.server.svsmode(ns.Nick, newNick, "-r")
+	ns.c().svsmode(ns.Nick, newNick, "-r")
 
 	ns.handleRegisteredNick(newNick)
 }
@@ -74,7 +72,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 		return
 	}
 
-	rn, err := ns.repo.GetByNick(nick)
+	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
@@ -90,7 +88,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 		Email: args[0],
 		Passwd: args[1],
 	}
-	err = ns.repo.Register(newRn)
+	err = ns.r().Register(newRn)
 	if err != nil {
 		ns.notice(nick, "Error registering nickname")
 		fmt.Printf("***ERROR*** %s\n", err.Error())
@@ -106,12 +104,12 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		ns.notice(nick, "You must specify a password")
 		return
 	}
-	if ns.server.curstate.IsIdentified(nick) {
+	if ns.mere.curstate.IsIdentified(nick) {
 		ns.notice(nick, "You are already identified")
 		return
 	}
 
-	rn, err := ns.repo.GetByNick(nick)
+	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
@@ -122,7 +120,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		return
 	}
 	
-	validPassword := ns.repo.Authenticate(rn, args[0])
+	validPassword := ns.r().Authenticate(rn, args[0])
 	if validPassword {
 		ns.identifyUser(nick)
 	} else {
@@ -131,7 +129,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 }
 
 func (ns *NickServ) handleRegisteredNick(nick string) {
-	rn, err := ns.repo.GetByNick(nick)
+	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
@@ -143,7 +141,7 @@ func (ns *NickServ) handleRegisteredNick(nick string) {
 
 	ns.notice(nick, "Your nickname is registered. You have 60 seconds to identify or change your nick.")
 
-	ns.server.curstate.NewNick(nick)
+	ns.mere.curstate.NewNick(nick)
 	ns.enforceIdentifiedNick(nick)
 }
 
@@ -152,7 +150,7 @@ func (ns *NickServ) enforceIdentifiedNick(nick string) {
 	go func() {
 		time.Sleep(60 * time.Second)
 
-		if ns.server.curstate.IsNew(nick) {
+		if ns.mere.curstate.IsNew(nick) {
 			newNick := ns.svsnick(nick)
 			ns.notice(newNick, "Your nickname has been changed because you did not identify")
 		}
@@ -161,21 +159,29 @@ func (ns *NickServ) enforceIdentifiedNick(nick string) {
 
 func (ns *NickServ) svsnick(nick string) string {
 	newNick := "User" + strconv.Itoa(ns.rand.Int())
-	ns.server.svsnick(ns.Nick, nick, newNick)
+	ns.c().svsnick(ns.Nick, nick, newNick)
 	return newNick
 }
 
 func (ns *NickServ) identifyUser(nick string) {
-	ns.server.curstate.Identify(nick)
-	ns.server.svsmode(ns.Nick, nick, "+r")
-	ns.server.chghost(ns.Nick, nick, "registered." + nick)
+	ns.mere.curstate.Identify(nick)
+	ns.c().svsmode(ns.Nick, nick, "+r")
+	ns.c().chghost(ns.Nick, nick, "registered." + nick)
 	ns.notice(nick, "You are now identified")
 }
 
 func (ns *NickServ) unidentifyUser(nick string) {
-	ns.server.curstate.Unidentify(nick)
+	ns.mere.curstate.Unidentify(nick)
 }
 
 func (ns *NickServ) notice(recip, message string) {
-	ns.server.notice(ns.Nick, recip, message)
+	ns.c().notice(ns.Nick, recip, message)
+}
+
+func (ns *NickServ) c() *Connection {
+	return ns.mere.connection
+}
+
+func (ns *NickServ) r() *RegisteredNickRepo {
+	return ns.mere.datastore.RegisteredNicks
 }
