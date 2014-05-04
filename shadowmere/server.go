@@ -17,8 +17,8 @@ type Server struct {
 	
 	nickserv *NickServ
 
-	// TODO - This really doesn't belong here
 	datastore *Datastore
+	curstate *CurState
 
 	name string
 	addr string
@@ -37,6 +37,7 @@ func NewServer(name, addr, pass string, ds *Datastore) (*Server, error) {
 		reader: reader,
 
 		datastore: ds,
+		curstate: NewCurState(),
 
 		name: name,
 		addr: addr,

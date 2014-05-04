@@ -6,6 +6,10 @@ import (
 	"code.google.com/p/go.crypto/bcrypt"
 )
 
+/**
+ * Persistent services state - which nicks and channels are registered,
+ * access control list settings, and so on.
+ */
 type Datastore struct {
 	db *sql.DB
 
