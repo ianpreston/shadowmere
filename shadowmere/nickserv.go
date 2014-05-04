@@ -142,6 +142,8 @@ func (ns *NickServ) handleRegisteredNick(nick string) {
 	}
 
 	ns.notice(nick, "Your nickname is registered. You have 60 seconds to identify or change your nick.")
+
+	ns.server.curstate.NewNick(nick)
 	ns.enforceIdentifiedNick(nick)
 }
 
