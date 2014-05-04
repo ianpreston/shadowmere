@@ -8,6 +8,12 @@ import (
 
 type Datastore struct {
 	db *sql.DB
+
+	RegisteredNicks *RegisteredNickRepo
+}
+
+type RegisteredNickRepo struct {
+	ds *Datastore
 }
 
 type RegisteredNick struct {
@@ -26,13 +32,15 @@ func NewDatastore(pgUrl string) (*Datastore, error) {
 	ds := &Datastore{
 		db: db,
 	}
+	ds.RegisteredNicks = &RegisteredNickRepo{ds}
+
 	return ds, nil
 }
 
-func (ds *Datastore) GetRegisteredNick(nick string) (*RegisteredNick, error) {
+func (repo *RegisteredNickRepo) GetByNick(nick string) (*RegisteredNick, error) {
 	rn := &RegisteredNick{}
 
-	row := ds.db.QueryRow(
+	row := repo.ds.db.QueryRow(
 		"SELECT id, nick, email, passwd FROM RegisteredNicks WHERE nick = $1",
 		nick,
 	)
@@ -47,7 +55,7 @@ func (ds *Datastore) GetRegisteredNick(nick string) (*RegisteredNick, error) {
 	return rn, nil
 }
 
-func (ds *Datastore) Authenticate(rn *RegisteredNick, passwd string) bool {
+func (repo *RegisteredNickRepo) Authenticate(rn *RegisteredNick, passwd string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(rn.Passwd), []byte(passwd))
 	if err == nil {
 		return true
@@ -56,14 +64,14 @@ func (ds *Datastore) Authenticate(rn *RegisteredNick, passwd string) bool {
 	}
 }
 
-func (ds *Datastore) Register(rn *RegisteredNick) error {
+func (repo *RegisteredNickRepo) Register(rn *RegisteredNick) error {
 	passwd, err := bcrypt.GenerateFromPassword([]byte(rn.Passwd), 12)
 	if err != nil {
 		return err
 	}
 
 	var registeredNickId int
-	err = ds.db.QueryRow(
+	err = repo.ds.db.QueryRow(
 		"INSERT INTO RegisteredNicks (nick, email, passwd) VALUES ($1, $2, $3) RETURNING id;",
 		rn.Nick,
 		rn.Email,

@@ -16,6 +16,7 @@ type NickServ struct {
 	server *Server
 	handlers map[string]nickservCmdHandler
 
+	repo *RegisteredNickRepo
 	rand *rand.Rand
 
 	// Store a list, by nick, of users that have identified to NickServ.
@@ -33,6 +34,7 @@ func NewNickserv(server *Server) *NickServ {
 	ns := &NickServ{
 		Nick: "NickServ",
 		server: server,
+		repo: server.datastore.RegisteredNicks,
 		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		identified: make(map[string]bool),
 		killLocks: make(map[string]bool),
@@ -84,7 +86,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 		return
 	}
 
-	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	rn, err := ns.repo.GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
@@ -100,7 +102,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 		Email: args[0],
 		Passwd: args[1],
 	}
-	err = ns.server.datastore.Register(newRn)
+	err = ns.repo.Register(newRn)
 	if err != nil {
 		ns.notice(nick, "Error registering nickname")
 		fmt.Printf("***ERROR*** %s\n", err.Error())
@@ -121,7 +123,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		return
 	}
 
-	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	rn, err := ns.repo.GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
@@ -132,7 +134,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 		return
 	}
 	
-	validPassword := ns.server.datastore.Authenticate(rn, args[0])
+	validPassword := ns.repo.Authenticate(rn, args[0])
 	if validPassword {
 		ns.userIdentified(nick)
 	} else {
@@ -141,7 +143,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 }
 
 func (ns *NickServ) handleRegisteredNick(nick string) {
-	rn, err := ns.server.datastore.GetRegisteredNick(nick)
+	rn, err := ns.repo.GetByNick(nick)
 	if err != nil {
 		// TODO - Handle error better
 		fmt.Printf("***ERROR*** %v\n", err.Error())
