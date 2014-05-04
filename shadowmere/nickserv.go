@@ -151,13 +151,13 @@ func (ns *NickServ) enforceIdentifiedNick(nick string) {
 		time.Sleep(60 * time.Second)
 
 		if ns.mere.curstate.IsNew(nick) {
-			newNick := ns.svsnick(nick)
+			newNick := ns.assignRandomNick(nick)
 			ns.notice(newNick, "Your nickname has been changed because you did not identify")
 		}
 	}()
 }
 
-func (ns *NickServ) svsnick(nick string) string {
+func (ns *NickServ) assignRandomNick(nick string) string {
 	newNick := "User" + strconv.Itoa(ns.rand.Int())
 	ns.c().svsnick(ns.Nick, nick, newNick)
 	return newNick

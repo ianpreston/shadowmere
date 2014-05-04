@@ -5,6 +5,7 @@ type Services struct {
 	connection *Connection
 
 	nickserv *NickServ
+	chanserv *ChanServ
 
 	datastore *Datastore
 	curstate *CurState
@@ -27,6 +28,7 @@ func NewServices(pgUrl, name, addr, pass string) (*Services, error) {
 	mere.connection = connection
 	mere.curstate = NewCurState()
 	mere.nickserv = NewNickserv(mere)
+	mere.chanserv = NewChanserv(mere)
 
 	return mere, nil
 }

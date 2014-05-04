@@ -64,7 +64,10 @@ func (srv *Connection) authenticateUnreal() {
 
 func (srv *Connection) initializeServices() {
 	ns := srv.mere.nickserv
+	cs := srv.mere.chanserv
+
 	srv.nick(ns.Nick, ns.Nick, srv.name, "Services")
+	srv.nick(cs.Nick, cs.Nick, srv.name, "Services")
 }
 
 func (srv *Connection) listenLoop() {
@@ -111,6 +114,9 @@ func (srv *Connection) handlePrivmsg(origin string, args []string) {
 	msg := args[1]
 	if strings.ToLower(srv.mere.nickserv.Nick) == strings.ToLower(to) {
 		srv.mere.nickserv.OnPrivmsg(origin, msg)
+	}
+	if strings.ToLower(srv.mere.chanserv.Nick) == strings.ToLower(to) {
+		srv.mere.chanserv.OnPrivmsg(origin, msg)
 	}
 }
 
