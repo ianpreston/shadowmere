@@ -26,7 +26,7 @@ Currently `shadowmere` only supports UnrealIRCd, though support for more IRCds m
         your.services.hostname;
     };
 
-3) Open `main.go` and edit the configuration directives
+3) Open `shadowmere.example.conf`, change the directives, and save as `shadowmere.conf`
 
 4) Configure the PostgreSQL database:
 
