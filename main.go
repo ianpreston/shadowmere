@@ -6,17 +6,17 @@ import (
 )
 
 func main() {
-	// TODO - Load configuration values from a file
-	name := "noveria.0x-1.com"
-	addr := "localhost:6668"
-	pass := "foo"
-	pgUrl := "postgres://localhost/shadowmere?sslmode=disable"
+    conf := shadowmere.LoadConfig("shadowmere.conf")
+    err := shadowmere.ValidateConfig(conf)
+    if err != nil {
+        log.Fatalf(err.Error())
+    }
 
 	mere, err := shadowmere.NewServices(
-		pgUrl,
-		name,
-		addr,
-		pass,
+        conf.Postgres.URI,
+        conf.Link.Name,
+        conf.Link.RemoteAddr,
+        conf.Link.Password,
 	)
 	if err != nil {
 		log.Fatal(err.Error())
