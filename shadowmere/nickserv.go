@@ -1,7 +1,8 @@
 package shadowmere
 
 import (
-	"fmt"
+	"../kenny"
+    "fmt"
 	"strings"
 	"time"
 	"math/rand"
@@ -74,8 +75,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-		// TODO - Handle error better
-		fmt.Printf("***ERROR*** %v\n", err.Error())
+        kenny.ErrorErr(err)
 		return
 	}
 	if rn != nil {
@@ -91,7 +91,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 	err = ns.r().Register(newRn)
 	if err != nil {
 		ns.notice(nick, "Error registering nickname")
-		fmt.Printf("***ERROR*** %s\n", err.Error())
+        kenny.ErrorErr(err)
 		return
 	}
 
@@ -111,28 +111,26 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-		// TODO - Handle error better
-		fmt.Printf("***ERROR*** %v\n", err.Error())
+        kenny.ErrorErr(err)
 		return
 	}
 	if rn == nil {
 		ns.notice(nick, "This nickname is not registered")
 		return
 	}
-	
+
 	validPassword := ns.r().Authenticate(rn, args[0])
 	if validPassword {
 		ns.identifyUser(nick)
 	} else {
 		ns.notice(nick, "Invalid password for this nick")
-	}	
+	}
 }
 
 func (ns *NickServ) handleRegisteredNick(nick string) {
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-		// TODO - Handle error better
-		fmt.Printf("***ERROR*** %v\n", err.Error())
+        kenny.ErrorErr(err)
 		return
 	}
 	if rn == nil {

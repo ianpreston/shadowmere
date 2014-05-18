@@ -1,6 +1,7 @@
 package shadowmere
 
 import (
+    "../kenny"
 	"net"
 	"fmt"
 	"bufio"
@@ -16,7 +17,7 @@ type Connection struct {
 	reader *bufio.Reader
 
 	handlers map[string]handler
-	
+
 	name string
 	addr string
 	pass string
@@ -74,10 +75,10 @@ func (srv *Connection) listenLoop() {
 	for {
 		line, err := srv.read()
 		if err != nil {
-			fmt.Print("***ERROR*** ", err.Error())
+		    kenny.CriticalErr(err)
 			return
 		}
-		
+
 		srv.handleLine(line)
 	}
 }
@@ -85,7 +86,7 @@ func (srv *Connection) listenLoop() {
 func (srv *Connection) handleLine(line string) {
 	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
-		fmt.Println("handleLine(): %s", err.Error())
+        kenny.Warn("handleLine(): " + err.Error())
 		return
 	}
 
@@ -97,7 +98,7 @@ func (srv *Connection) handleLine(line string) {
 
 func (srv *Connection) handlePing(origin string, args []string) {
 	if len(args) == 0 {
-		fmt.Println("handlePing(): Malformed PING!")
+        kenny.Warn("Malformed PING")
 		return
 	}
 
@@ -106,7 +107,7 @@ func (srv *Connection) handlePing(origin string, args []string) {
 
 func (srv *Connection) handlePrivmsg(origin string, args []string) {
 	if len(args) < 2 {
-		fmt.Println("handlePing(): Malformed PRIVMSG!")
+        kenny.Warn("Malformed PRIVMSG")
 		return
 	}
 
@@ -143,7 +144,7 @@ func (srv *Connection) handleNick(origin string, args []string) {
 
 func (srv *Connection) handleNewNick(args []string) {
 	if len(args) < 1 {
-		fmt.Println("handleNewNick(): Malformed NICKv2!")
+        kenny.Warn("Malformed NICKv2")
 		return
 	}
 
@@ -153,7 +154,7 @@ func (srv *Connection) handleNewNick(args []string) {
 
 func (srv *Connection) handleNickChange(origin string, args []string) {
 	if len(args) < 1 {
-		fmt.Println("handleNickChange(): Malformed NICK!")
+        kenny.Warn("Malformed NICK")
 		return
 	}
 
@@ -165,11 +166,9 @@ func (srv *Connection) handleNickChange(origin string, args []string) {
 func (srv *Connection) read() (string, error) {
 	s, err := srv.reader.ReadString('\n')
 
-	fmt.Printf("<-%s", s)
 	return s, err
 }
 
 func (srv *Connection) write(s string) {
-	fmt.Printf("->%s", s)
 	fmt.Fprint(srv.conn, s)
 }
