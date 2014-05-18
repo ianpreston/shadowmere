@@ -23,8 +23,8 @@ func NewChanserv(mere *Services) *ChanServ {
 	}
 	cs.handlers = map[string]chanservCmdHandler{
 		"REGISTER": cs.handleRegister,
-		"OP": cs.handleOp,
-		"DEOP": cs.handleDeop,
+		"OP":       cs.handleOp,
+		"DEOP":     cs.handleDeop,
 	}
 
 	return cs

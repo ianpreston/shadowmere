@@ -11,7 +11,7 @@ type set map[string]bool
  * what nicks are connected, and so forth.
  */
 type CurState struct {
-	glock sync.RWMutex  // Eew
+	glock sync.RWMutex // Eew
 
 	// Nicks that have identified to NickServ
 	identifiedNicks set

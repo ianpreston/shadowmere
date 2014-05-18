@@ -1,24 +1,24 @@
 package main
 
 import (
+	"./kenny"
 	"./shadowmere"
-    "./kenny"
 )
 
 func main() {
-    conf := shadowmere.LoadConfig("shadowmere.conf")
-    err := shadowmere.ValidateConfig(conf)
-    if err != nil {
-        kenny.Fatal(err)
-    }
+	conf := shadowmere.LoadConfig("shadowmere.conf")
+	err := shadowmere.ValidateConfig(conf)
+	if err != nil {
+		kenny.Fatal(err)
+	}
 
-    kenny.Info("Hello, world!")
+	kenny.Info("Hello, world!")
 
 	mere, err := shadowmere.NewServices(
-        conf.Postgres.URI,
-        conf.Link.Name,
-        conf.Link.RemoteAddr,
-        conf.Link.Password,
+		conf.Postgres.URI,
+		conf.Link.Name,
+		conf.Link.RemoteAddr,
+		conf.Link.Password,
 	)
 	if err != nil {
 		kenny.Fatal(err)

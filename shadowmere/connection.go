@@ -1,10 +1,10 @@
 package shadowmere
 
 import (
-    "../kenny"
-	"net"
-	"fmt"
+	"../kenny"
 	"bufio"
+	"fmt"
+	"net"
 	"strings"
 )
 
@@ -13,7 +13,7 @@ type handler func(string, []string)
 type Connection struct {
 	mere *Services
 
-	conn net.Conn
+	conn   net.Conn
 	reader *bufio.Reader
 
 	handlers map[string]handler
@@ -33,7 +33,7 @@ func NewConnection(mere *Services, name, addr, pass string) (*Connection, error)
 	srv := &Connection{
 		mere: mere,
 
-		conn: conn,
+		conn:   conn,
 		reader: reader,
 
 		name: name,
@@ -41,10 +41,10 @@ func NewConnection(mere *Services, name, addr, pass string) (*Connection, error)
 		pass: pass,
 	}
 	srv.handlers = map[string]handler{
-		"PING": srv.handlePing,
+		"PING":    srv.handlePing,
 		"PRIVMSG": srv.handlePrivmsg,
-		"QUIT": srv.handleQuit,
-		"NICK": srv.handleNick,
+		"QUIT":    srv.handleQuit,
+		"NICK":    srv.handleNick,
 	}
 
 	return srv, nil
@@ -75,7 +75,7 @@ func (srv *Connection) listenLoop() {
 	for {
 		line, err := srv.read()
 		if err != nil {
-		    kenny.CriticalErr(err)
+			kenny.CriticalErr(err)
 			return
 		}
 
@@ -86,7 +86,7 @@ func (srv *Connection) listenLoop() {
 func (srv *Connection) handleLine(line string) {
 	command, origin, args, err := srv.parseMessage(line)
 	if err != nil {
-        kenny.Warn("handleLine(): " + err.Error())
+		kenny.Warn("handleLine(): " + err.Error())
 		return
 	}
 
@@ -98,7 +98,7 @@ func (srv *Connection) handleLine(line string) {
 
 func (srv *Connection) handlePing(origin string, args []string) {
 	if len(args) == 0 {
-        kenny.Warn("Malformed PING")
+		kenny.Warn("Malformed PING")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (srv *Connection) handlePing(origin string, args []string) {
 
 func (srv *Connection) handlePrivmsg(origin string, args []string) {
 	if len(args) < 2 {
-        kenny.Warn("Malformed PRIVMSG")
+		kenny.Warn("Malformed PRIVMSG")
 		return
 	}
 
@@ -144,7 +144,7 @@ func (srv *Connection) handleNick(origin string, args []string) {
 
 func (srv *Connection) handleNewNick(args []string) {
 	if len(args) < 1 {
-        kenny.Warn("Malformed NICKv2")
+		kenny.Warn("Malformed NICKv2")
 		return
 	}
 
@@ -154,7 +154,7 @@ func (srv *Connection) handleNewNick(args []string) {
 
 func (srv *Connection) handleNickChange(origin string, args []string) {
 	if len(args) < 1 {
-        kenny.Warn("Malformed NICK")
+		kenny.Warn("Malformed NICK")
 		return
 	}
 

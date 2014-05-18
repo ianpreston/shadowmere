@@ -1,9 +1,9 @@
 package shadowmere
 
 import (
-	"strings"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -30,7 +30,7 @@ func (srv *Connection) parseMessage(line string) (string, string, []string, erro
 			args = tokens[1:]
 		}
 	}
-	
+
 	return command, origin, args, nil
 }
 

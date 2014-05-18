@@ -1,6 +1,5 @@
 package shadowmere
 
-
 type Services struct {
 	connection *Connection
 
@@ -8,7 +7,7 @@ type Services struct {
 	chanserv *ChanServ
 
 	datastore *Datastore
-	curstate *CurState
+	curstate  *CurState
 }
 
 func NewServices(pgUrl, name, addr, pass string) (*Services, error) {

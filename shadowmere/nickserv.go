@@ -2,11 +2,11 @@ package shadowmere
 
 import (
 	"../kenny"
-    "fmt"
-	"strings"
-	"time"
+	"fmt"
 	"math/rand"
 	"strconv"
+	"strings"
+	"time"
 )
 
 type nickservCmdHandler func(string, []string)
@@ -75,7 +75,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-        kenny.ErrorErr(err)
+		kenny.ErrorErr(err)
 		return
 	}
 	if rn != nil {
@@ -84,14 +84,14 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 	}
 
 	newRn := &RegisteredNick{
-		Nick: nick,
-		Email: args[0],
+		Nick:   nick,
+		Email:  args[0],
 		Passwd: args[1],
 	}
 	err = ns.r().Register(newRn)
 	if err != nil {
 		ns.notice(nick, "Error registering nickname")
-        kenny.ErrorErr(err)
+		kenny.ErrorErr(err)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (ns *NickServ) handleRegister(nick string, args []string) {
 }
 
 func (ns *NickServ) handleIdentify(nick string, args []string) {
-	if len(args) != 1{
+	if len(args) != 1 {
 		ns.notice(nick, "You must specify a password")
 		return
 	}
@@ -111,7 +111,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-        kenny.ErrorErr(err)
+		kenny.ErrorErr(err)
 		return
 	}
 	if rn == nil {
@@ -130,7 +130,7 @@ func (ns *NickServ) handleIdentify(nick string, args []string) {
 func (ns *NickServ) handleRegisteredNick(nick string) {
 	rn, err := ns.r().GetByNick(nick)
 	if err != nil {
-        kenny.ErrorErr(err)
+		kenny.ErrorErr(err)
 		return
 	}
 	if rn == nil {
@@ -164,7 +164,7 @@ func (ns *NickServ) assignRandomNick(nick string) string {
 func (ns *NickServ) identifyUser(nick string) {
 	ns.mere.curstate.Identify(nick)
 	ns.c().svsmode(ns.Nick, nick, "+r")
-	ns.c().chghost(ns.Nick, nick, "registered." + nick)
+	ns.c().chghost(ns.Nick, nick, "registered."+nick)
 	ns.notice(nick, "You are now identified")
 }
 

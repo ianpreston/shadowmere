@@ -1,9 +1,9 @@
 package shadowmere
 
 import (
-	_ "github.com/lib/pq"
-	"database/sql"
 	"code.google.com/p/go.crypto/bcrypt"
+	"database/sql"
+	_ "github.com/lib/pq"
 )
 
 /**
@@ -21,9 +21,9 @@ type RegisteredNickRepo struct {
 }
 
 type RegisteredNick struct {
-	Id int
-	Nick string
-	Email string
+	Id     int
+	Nick   string
+	Email  string
 	Passwd string
 }
 
